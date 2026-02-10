@@ -158,7 +158,21 @@ def _submit_leave_request_impl(
 
         start = date.fromisoformat(start_date)
         end = date.fromisoformat(end_date)
+
+        if end < start:
+            return {
+                "success": False,
+                "error": "End date must be on or after start date",
+                "code": "INVALID_DATES",
+            }
+
         days = _count_business_days(start, end)
+        if days <= 0:
+            return {
+                "success": False,
+                "error": "Date range contains no business days",
+                "code": "INVALID_DATES",
+            }
 
         balance = (
             session.query(LeaveBalance)
