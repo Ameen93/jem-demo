@@ -1,6 +1,7 @@
 """EWA (Earned Wage Access) MCP tools."""
 
 import logging
+import uuid
 from datetime import date, datetime
 from typing import Optional
 
@@ -118,4 +119,82 @@ def _check_ewa_eligibility_impl(employee_id: str, session: Session) -> dict:
         }
     except Exception:
         logger.exception("Unexpected error in check_ewa_eligibility")
+        return {"success": False, "error": "Internal error", "code": "INTERNAL"}
+
+
+def request_ewa_advance(
+    employee_id: str, amount: float, session: Optional[Session] = None
+) -> dict:
+    """Request an EWA advance for an employee.
+
+    Args:
+        employee_id: Employee ID.
+        amount: Amount to advance in Rands.
+        session: Optional SQLAlchemy session for testing.
+
+    Returns:
+        MCP response dict with transaction details or error.
+    """
+    if session is not None:
+        return _request_ewa_advance_impl(employee_id, amount, session)
+
+    try:
+        with get_session() as s:
+            return _request_ewa_advance_impl(employee_id, amount, s)
+    except Exception:
+        logger.exception("Unexpected error in request_ewa_advance")
+        return {"success": False, "error": "Internal error", "code": "INTERNAL"}
+
+
+def _request_ewa_advance_impl(
+    employee_id: str, amount: float, session: Session
+) -> dict:
+    """Internal implementation for request_ewa_advance."""
+    try:
+        # Check eligibility first
+        eligibility = _check_ewa_eligibility_impl(employee_id, session)
+        if not eligibility["success"]:
+            return eligibility
+
+        data = eligibility["data"]
+        if not data["eligible"]:
+            return {
+                "success": False,
+                "error": data.get("reason", "Not eligible for EWA"),
+                "code": "NOT_ELIGIBLE",
+            }
+
+        if amount > data["available"]:
+            return {
+                "success": False,
+                "error": "Amount exceeds available balance",
+                "code": "EXCEEDS_AVAILABLE",
+            }
+
+        # Create transaction
+        now = datetime.now()
+        txn_id = f"EWA-{now.strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+        txn = EWATransaction(
+            id=txn_id,
+            employee_id=employee_id,
+            amount=amount,
+            fee=EWA_FEE,
+            status=EWAStatus.DISBURSED.value,
+            requested_at=now,
+            disbursed_at=now,
+        )
+        session.add(txn)
+        session.flush()
+
+        return {
+            "success": True,
+            "data": {
+                "transaction_id": txn_id,
+                "amount": amount,
+                "fee": EWA_FEE,
+                "net": amount - EWA_FEE,
+            },
+        }
+    except Exception:
+        logger.exception("Unexpected error in request_ewa_advance")
         return {"success": False, "error": "Internal error", "code": "INTERNAL"}

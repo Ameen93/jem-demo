@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.db.models import Base
+from src.db.models import Base, EWATransaction
 from src.db.seed import seed_database
 
 
@@ -84,5 +84,62 @@ class TestCheckEwaEligibility:
 
         with seeded_session() as session:
             result = check_ewa_eligibility("INVALID", session)
+            assert result["success"] is False
+            assert result["code"] == "NOT_FOUND"
+
+
+class TestRequestEwaAdvance:
+    """Tests for request_ewa_advance MCP tool."""
+
+    def test_successful_advance(self):
+        """AC #1: Eligible employee gets advance with correct details."""
+        from src.mcp_server.tools.ewa_tools import request_ewa_advance
+
+        with seeded_session() as session:
+            result = request_ewa_advance("EMP001", 1500, session)
+            assert result["success"] is True
+            data = result["data"]
+            assert data["amount"] == 1500
+            assert data["fee"] == 10
+            assert data["net"] == 1490
+            assert "transaction_id" in data
+
+    def test_transaction_created_in_db(self):
+        """Transaction record created after successful advance."""
+        from src.mcp_server.tools.ewa_tools import request_ewa_advance
+
+        with seeded_session() as session:
+            result = request_ewa_advance("EMP001", 1500, session)
+            txn_id = result["data"]["transaction_id"]
+            txn = session.get(EWATransaction, txn_id)
+            assert txn is not None
+            assert txn.amount == 1500
+            assert txn.fee == 10
+            assert txn.status == "disbursed"
+
+    def test_exceeds_available_returns_error(self):
+        """AC #2: Requesting more than available returns error."""
+        from src.mcp_server.tools.ewa_tools import request_ewa_advance
+
+        with seeded_session() as session:
+            # Sipho has R2,134 available, request R3,000
+            result = request_ewa_advance("EMP001", 3000, session)
+            assert result["success"] is False
+            assert result["code"] == "EXCEEDS_AVAILABLE"
+
+    def test_ineligible_employee_rejected(self):
+        """Probation employee cannot request advance."""
+        from src.mcp_server.tools.ewa_tools import request_ewa_advance
+
+        with seeded_session() as session:
+            result = request_ewa_advance("EMP004", 500, session)
+            assert result["success"] is False
+
+    def test_invalid_employee(self):
+        """Invalid employee returns NOT_FOUND."""
+        from src.mcp_server.tools.ewa_tools import request_ewa_advance
+
+        with seeded_session() as session:
+            result = request_ewa_advance("INVALID", 500, session)
             assert result["success"] is False
             assert result["code"] == "NOT_FOUND"
