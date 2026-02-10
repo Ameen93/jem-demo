@@ -32,7 +32,9 @@ def _call_hr_tool(message: str, employee_id: str) -> dict:
     )
     tool_name = response.content.strip().lower()
 
-    if tool_name == "get_leave_balance":
+    if tool_name == "submit_leave_request":
+        return submit_leave_request(employee_id, "annual", "2026-03-01", "2026-03-03")
+    elif tool_name == "get_leave_balance":
         return get_leave_balance(employee_id)
     elif tool_name == "get_payslip":
         return get_payslip(employee_id, "2026-02")

@@ -26,6 +26,10 @@ def _format_response(tool_results: dict, language: str, query: str) -> str:
     response = llm.invoke(
         f"Generate a helpful, concise response to the employee's question "
         f"based on these tool results. Respond in English.\n\n"
+        f"Rules:\n"
+        f"- For leave submissions: say the request has been submitted and will be sent to their manager for approval. Never say it IS approved.\n"
+        f"- For balances: state the exact numbers from the data.\n"
+        f"- Be factual — only state what the data shows, do not speculate.\n\n"
         f"Employee question: {query}\n"
         f"Tool results: {json.dumps(tool_results)}\n\n"
         f"Response:"
