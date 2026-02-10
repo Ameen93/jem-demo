@@ -151,6 +151,13 @@ def _request_ewa_advance_impl(
 ) -> dict:
     """Internal implementation for request_ewa_advance."""
     try:
+        if amount <= 0:
+            return {
+                "success": False,
+                "error": "Amount must be positive",
+                "code": "INVALID_AMOUNT",
+            }
+
         # Check eligibility first
         eligibility = _check_ewa_eligibility_impl(employee_id, session)
         if not eligibility["success"]:
