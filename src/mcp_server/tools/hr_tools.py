@@ -8,7 +8,14 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from src.db.connection import get_session
-from src.db.models import Employee, EWAStatus, EWATransaction, LeaveBalance, Timesheet
+from src.db.models import (
+    Employee,
+    EWAStatus,
+    EWATransaction,
+    LeaveBalance,
+    Timesheet,
+    TimesheetStatus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -248,13 +255,14 @@ def _get_payslip_impl(employee_id: str, month: str, session: Session) -> dict:
         else:
             period_end = date(year + 1, 1, 1)
 
-        # Get timesheets for the month
+        # Get approved timesheets for the month
         timesheets = (
             session.query(Timesheet)
             .filter(
                 Timesheet.employee_id == employee_id,
                 Timesheet.pay_period_start >= period_start,
                 Timesheet.pay_period_start < period_end,
+                Timesheet.status == TimesheetStatus.APPROVED.value,
             )
             .all()
         )
