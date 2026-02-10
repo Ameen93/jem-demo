@@ -2,8 +2,7 @@
 
 import logging
 
-from langchain_anthropic import ChatAnthropic
-
+from src.agents.llm import get_llm
 from src.agents.state import AgentState
 from src.mcp_server.tools.ewa_tools import check_ewa_eligibility, request_ewa_advance
 
@@ -20,7 +19,7 @@ def _call_ewa_tool(message: str, employee_id: str) -> dict:
     Returns:
         Tool result dict.
     """
-    llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", max_tokens=20)
+    llm = get_llm(max_tokens=20)
     response = llm.invoke(
         f"Does this message request an EWA advance or just check eligibility? "
         f"Respond with ONLY: 'check' or 'request'\n"

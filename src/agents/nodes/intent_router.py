@@ -2,8 +2,7 @@
 
 import logging
 
-from langchain_anthropic import ChatAnthropic
-
+from src.agents.llm import get_llm
 from src.agents.state import AgentState
 
 logger = logging.getLogger(__name__)
@@ -20,7 +19,7 @@ def _classify_intent(text: str) -> str:
     Returns:
         One of: hr_query, ewa_request, policy_question.
     """
-    llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", max_tokens=20)
+    llm = get_llm(max_tokens=20)
     response = llm.invoke(
         f"Classify this HR employee message into exactly one category. "
         f"Respond with ONLY the category name.\n"

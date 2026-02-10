@@ -109,11 +109,6 @@ def run_conversation(console: Console, employee: dict, graph) -> None:
 def main() -> None:
     """Entry point for the demo CLI."""
     console = get_console()
-
-    # Validate API key
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        console.print("[red]Error: ANTHROPIC_API_KEY environment variable is required.[/red]")
-        sys.exit(1)
     display_welcome_banner(console)
     console.print()
 

@@ -2,8 +2,7 @@
 
 import logging
 
-from langchain_anthropic import ChatAnthropic
-
+from src.agents.llm import get_llm
 from src.agents.state import AgentState
 from src.i18n.detector import detect_language as keyword_detect
 
@@ -26,8 +25,8 @@ def _detect_language(text: str) -> str:
     if detected != "en":
         return detected
 
-    # Fall back to Claude API for ambiguous cases
-    llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", max_tokens=10)
+    # Fall back to LLM for ambiguous cases
+    llm = get_llm(max_tokens=10)
     response = llm.invoke(
         f"Detect the language of this text and respond with ONLY the ISO 639-1 "
         f"code (en, zu, xh, af, nso, st): \"{text}\""

@@ -3,8 +3,7 @@
 import json
 import logging
 
-from langchain_anthropic import ChatAnthropic
-
+from src.agents.llm import get_llm
 from src.agents.state import AgentState
 from src.i18n.detector import iso_to_nllb
 from src.i18n.translator import translate
@@ -23,7 +22,7 @@ def _format_response(tool_results: dict, language: str, query: str) -> str:
     Returns:
         Formatted natural language response.
     """
-    llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", max_tokens=500)
+    llm = get_llm(max_tokens=500)
     response = llm.invoke(
         f"Generate a helpful, concise response to the employee's question "
         f"based on these tool results. Respond in English.\n\n"

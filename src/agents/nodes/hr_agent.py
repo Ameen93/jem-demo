@@ -2,8 +2,7 @@
 
 import logging
 
-from langchain_anthropic import ChatAnthropic
-
+from src.agents.llm import get_llm
 from src.agents.state import AgentState
 from src.mcp_server.tools.hr_tools import (
     get_employee,
@@ -25,7 +24,7 @@ def _call_hr_tool(message: str, employee_id: str) -> dict:
     Returns:
         Tool result dict.
     """
-    llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", max_tokens=20)
+    llm = get_llm(max_tokens=20)
     response = llm.invoke(
         f"Which HR tool should be called? Respond with ONLY the tool name.\n"
         f"Tools: get_employee, get_leave_balance, get_payslip, submit_leave_request\n"
