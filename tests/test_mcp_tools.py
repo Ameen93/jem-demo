@@ -1,4 +1,4 @@
-"""Tests for MCP tools - get_employee."""
+"""Tests for MCP tools - get_employee, get_leave_balance."""
 
 from contextlib import contextmanager
 
@@ -89,3 +89,51 @@ class TestGetEmployee:
                 emp_id = f"EMP{str(i).zfill(3)}"
                 result = get_employee(emp_id, session)
                 assert result["success"] is True, f"Failed for {emp_id}"
+
+
+class TestGetLeaveBalance:
+    """Tests for get_leave_balance MCP tool."""
+
+    def test_returns_correct_balances(self):
+        """AC #1: Nomvula (EMP005) has annual=9, sick=7, family=2."""
+        from src.mcp_server.tools.hr_tools import get_leave_balance
+
+        with seeded_session() as session:
+            result = get_leave_balance("EMP005", session)
+            assert result["success"] is True
+            data = result["data"]
+            assert data["annual"] == 9
+            assert data["sick"] == 7
+            assert data["family"] == 2
+
+    def test_returns_error_for_invalid_employee(self):
+        """AC #2: Invalid employee returns error."""
+        from src.mcp_server.tools.hr_tools import get_leave_balance
+
+        with seeded_session() as session:
+            result = get_leave_balance("INVALID", session)
+            assert result["success"] is False
+            assert result["code"] == "NOT_FOUND"
+
+    def test_response_format(self):
+        """Response format matches MCP standard."""
+        from src.mcp_server.tools.hr_tools import get_leave_balance
+
+        with seeded_session() as session:
+            result = get_leave_balance("EMP001", session)
+            assert set(result.keys()) == {"success", "data"}
+            assert isinstance(result["data"], dict)
+
+    def test_all_employees_have_balances(self):
+        """All 12 employees have leave balances."""
+        from src.mcp_server.tools.hr_tools import get_leave_balance
+
+        with seeded_session() as session:
+            for i in range(1, 13):
+                emp_id = f"EMP{str(i).zfill(3)}"
+                result = get_leave_balance(emp_id, session)
+                assert result["success"] is True, f"Failed for {emp_id}"
+                data = result["data"]
+                assert "annual" in data, f"{emp_id} missing annual"
+                assert "sick" in data, f"{emp_id} missing sick"
+                assert "family" in data, f"{emp_id} missing family"
