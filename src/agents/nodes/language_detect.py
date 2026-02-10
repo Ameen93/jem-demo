@@ -1,11 +1,11 @@
 """Language detection node for LangGraph."""
 
 import logging
-import os
 
 from langchain_anthropic import ChatAnthropic
 
 from src.agents.state import AgentState
+from src.i18n.detector import detect_language as keyword_detect
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ SUPPORTED_LANGUAGES = {"en", "zu", "xh", "af", "nso", "st"}
 
 
 def _detect_language(text: str) -> str:
-    """Detect language using Claude API.
+    """Detect language using keyword matching first, then Claude API fallback.
 
     Args:
         text: User message text.
@@ -21,6 +21,12 @@ def _detect_language(text: str) -> str:
     Returns:
         ISO 639-1 language code.
     """
+    # Try keyword-based detection first (no API call needed)
+    detected = keyword_detect(text)
+    if detected != "en":
+        return detected
+
+    # Fall back to Claude API for ambiguous cases
     llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", max_tokens=10)
     response = llm.invoke(
         f"Detect the language of this text and respond with ONLY the ISO 639-1 "

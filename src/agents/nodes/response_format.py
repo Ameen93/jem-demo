@@ -6,6 +6,8 @@ import logging
 from langchain_anthropic import ChatAnthropic
 
 from src.agents.state import AgentState
+from src.i18n.detector import iso_to_nllb
+from src.i18n.translator import translate
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +52,12 @@ def response_format(state: AgentState) -> dict:
         query = state["messages"][-1].content
 
         formatted = _format_response(tool_results, language, query)
+
+        # Translate to user's language if not English
+        if language != "en":
+            nllb_target = iso_to_nllb(language)
+            formatted = translate(formatted, "eng_Latn", nllb_target)
+
         return {"response": formatted}
     except Exception:
         logger.exception("Response formatting error")
