@@ -1,11 +1,11 @@
-"""Tests for MCP tools - get_employee, get_leave_balance."""
+"""Tests for MCP tools - get_employee, get_leave_balance, submit_leave_request."""
 
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.db.models import Base
+from src.db.models import Base, LeaveBalance, LeaveType
 from src.db.seed import seed_database
 
 
@@ -137,3 +137,62 @@ class TestGetLeaveBalance:
                 assert "annual" in data, f"{emp_id} missing annual"
                 assert "sick" in data, f"{emp_id} missing sick"
                 assert "family" in data, f"{emp_id} missing family"
+
+
+class TestSubmitLeaveRequest:
+    """Tests for submit_leave_request MCP tool."""
+
+    def test_successful_leave_submission(self):
+        """AC #1: Sufficient balance results in approved request and reduced balance."""
+        from src.mcp_server.tools.hr_tools import submit_leave_request
+
+        with seeded_session() as session:
+            # Sipho (EMP001) has 12 annual leave days
+            result = submit_leave_request(
+                "EMP001", "2026-03-02", "2026-03-04", "annual", session
+            )
+            assert result["success"] is True
+            data = result["data"]
+            assert data["status"] == "approved"
+            assert data["days"] == 3
+            assert "request_id" in data
+
+    def test_balance_reduced_after_submission(self):
+        """AC #1: Balance is actually reduced in the database."""
+        from src.mcp_server.tools.hr_tools import submit_leave_request
+
+        with seeded_session() as session:
+            # Sipho has 12 annual days, request 3
+            submit_leave_request(
+                "EMP001", "2026-03-02", "2026-03-04", "annual", session
+            )
+            balance = (
+                session.query(LeaveBalance)
+                .filter_by(employee_id="EMP001", leave_type=LeaveType.ANNUAL.value)
+                .first()
+            )
+            assert balance.balance_days == 9  # 12 - 3
+
+    def test_insufficient_balance_returns_error(self):
+        """AC #2: Insufficient balance returns error."""
+        from src.mcp_server.tools.hr_tools import submit_leave_request
+
+        with seeded_session() as session:
+            # Johan (EMP003) has only 2 annual leave days
+            result = submit_leave_request(
+                "EMP003", "2026-03-02", "2026-03-06", "annual", session
+            )
+            assert result["success"] is False
+            assert result["error"] == "Insufficient leave balance"
+            assert result["code"] == "INSUFFICIENT_BALANCE"
+
+    def test_invalid_employee_returns_error(self):
+        """Invalid employee returns NOT_FOUND error."""
+        from src.mcp_server.tools.hr_tools import submit_leave_request
+
+        with seeded_session() as session:
+            result = submit_leave_request(
+                "INVALID", "2026-03-02", "2026-03-04", "annual", session
+            )
+            assert result["success"] is False
+            assert result["code"] == "NOT_FOUND"
