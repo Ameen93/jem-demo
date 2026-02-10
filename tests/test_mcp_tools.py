@@ -196,3 +196,56 @@ class TestSubmitLeaveRequest:
             )
             assert result["success"] is False
             assert result["code"] == "NOT_FOUND"
+
+
+class TestGetPayslip:
+    """Tests for get_payslip MCP tool."""
+
+    def test_earnings_calculation(self):
+        """AC #1: Sipho (EMP001) 88hrs x R48.50 = R4268.00 gross."""
+        from src.mcp_server.tools.hr_tools import get_payslip
+
+        with seeded_session() as session:
+            result = get_payslip("EMP001", "2026-02", session)
+            assert result["success"] is True
+            data = result["data"]
+            assert data["gross_earnings"] == 4268.0
+            assert data["hours_worked"] == 88
+
+    def test_ewa_deductions_included(self):
+        """AC #2: Thandiwe (EMP002) has R800 EWA deduction."""
+        from src.mcp_server.tools.hr_tools import get_payslip
+
+        with seeded_session() as session:
+            result = get_payslip("EMP002", "2026-02", session)
+            data = result["data"]
+            assert data["ewa_deductions"] == 800
+
+    def test_net_pay_correct(self):
+        """AC #3: Thandiwe net = 3360 - 800 = 2560."""
+        from src.mcp_server.tools.hr_tools import get_payslip
+
+        with seeded_session() as session:
+            result = get_payslip("EMP002", "2026-02", session)
+            data = result["data"]
+            assert data["gross_earnings"] == 3360.0
+            assert data["net_pay"] == 2560.0
+
+    def test_no_ewa_deductions(self):
+        """Employee with no EWA has 0 deductions."""
+        from src.mcp_server.tools.hr_tools import get_payslip
+
+        with seeded_session() as session:
+            result = get_payslip("EMP001", "2026-02", session)
+            data = result["data"]
+            assert data["ewa_deductions"] == 0
+            assert data["net_pay"] == data["gross_earnings"]
+
+    def test_invalid_employee_returns_error(self):
+        """Invalid employee returns NOT_FOUND."""
+        from src.mcp_server.tools.hr_tools import get_payslip
+
+        with seeded_session() as session:
+            result = get_payslip("INVALID", "2026-02", session)
+            assert result["success"] is False
+            assert result["code"] == "NOT_FOUND"
