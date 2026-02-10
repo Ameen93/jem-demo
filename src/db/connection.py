@@ -1,6 +1,7 @@
 """Database connection management for Jem HR Demo."""
 
 import logging
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
@@ -52,6 +53,7 @@ def get_engine(db_path: Path | None = None) -> Engine:
     return _engine
 
 
+@contextmanager
 def get_session() -> Generator[Session, None, None]:
     """Get a database session as a context manager.
 

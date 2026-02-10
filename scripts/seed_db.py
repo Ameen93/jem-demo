@@ -16,17 +16,8 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 def main() -> None:
     """Initialize database and seed with demo data."""
     get_engine()
-    gen = get_session()
-    session = next(gen)
-    try:
+    with get_session() as session:
         seed_database(session)
-        gen.close()
-    except Exception:
-        try:
-            gen.throw(Exception)
-        except StopIteration:
-            pass
-        raise
 
 
 if __name__ == "__main__":
