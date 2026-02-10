@@ -84,6 +84,8 @@ def _check_ewa_eligibility_impl(employee_id: str, session: Session) -> dict:
             .filter(
                 Timesheet.employee_id == employee_id,
                 Timesheet.status == TimesheetStatus.APPROVED.value,
+                Timesheet.pay_period_start <= today,
+                Timesheet.pay_period_end >= today,
             )
             .all()
         )
